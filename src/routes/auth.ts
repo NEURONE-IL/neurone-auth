@@ -1,9 +1,11 @@
 import express, { application } from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import { Error, Schema } from "mongoose";
 
 const checkAuth = require("../middleware/check-auth");
 const User = require('../models/user');
+const LogUser = require("../models/log-users");
 
 const router = express.Router();
 
@@ -22,8 +24,28 @@ router.post("/signup", (req, res, next) => {
         });
         user.save()
         .then((result: any) => {
+
+          // create log data
+          const userLog = new LogUser({
+            userId: result._id,
+            email: result.email,
+            clientDate: req.body.clientDate,
+            serverDate: Date.now(),
+            type: "created account",
+          });
+
+          // save log data
+          userLog.save().then( (result: any) => {
+            console.log("Log data of created user:");
+            console.log(result);
+          }).catch((err: Error) => {
+            console.log("Error saving log data of the user:");
+            console.log(userLog);
+            console.error(err);
+          });
+
           res.status(201).json({
-            message: "created",
+            message: "Profile created",
             result: result
             })
           })
@@ -78,6 +100,26 @@ router.post("/login", (req, res, next) => {
       const token = jwt.sign({email: fetchedUser.email, userId: fetchedUser._id}, /*global.*/secret, { expiresIn: "1h" });
       console.log("Login successful - " + fetchedUser.email + " - token: " + token);
       console.log("-----------\n" + fetchedUser + "\n-------------------");
+
+      // create log data
+      const userLog = new LogUser({
+        userId: fetchedUser._id,
+        email: fetchedUser.email,
+        clientDate: req.body.clientDate,
+        serverDate: Date.now(),
+        type: "login",
+      });
+
+      // save log data
+      userLog.save().then( (result: any) => {
+        console.log("Log data of logged in user:");
+        console.log(result);
+      }).catch((err: Error) => {
+        console.log("Error saving log data of the user:");
+        console.log(userLog);
+        console.error(err);
+      });
+
       res.status(200).json({
         token: token,
         expiresIn: 3600, // seconds
@@ -87,6 +129,44 @@ router.post("/login", (req, res, next) => {
     .catch((err: any) => {
       console.error("Server error in login:\n" + err);
     })
+});
+
+router.post("/logout", (req, res) => {
+
+  // find user in db to save their email
+  User.findById(req.body.userId).then((result: any) => {
+
+    // create log data
+    const userLog = new LogUser({
+      userId: req.body.userId,
+      email: result.email,
+      clientDate: req.body.clientDate,
+      serverDate: Date.now(),
+      type: "logout",
+    });
+
+    // save log data
+    userLog.save().then( (result: any) => {
+
+      console.log("Log data of logged out user:");
+      console.log(result);
+      res.status(200).json({ message: "Log data saved." });
+
+    }).catch((err: Error) => {
+
+      console.log("Error saving log data of the user:");
+      console.log(userLog);
+      console.error(err);
+      res.status(500).json({ message: "Error saving log data." });
+
+    });
+
+  }).catch((error: any) => {
+    if(!res.headersSent) {
+      console.log(error);
+      res.status(500).json({ message: "Error saving log data." });
+    }
+  })
 });
 
 // TODO: check how to help other components know the current user (probably the login info will be enough)
