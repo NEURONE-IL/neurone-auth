@@ -7,6 +7,8 @@ const checkAuth = require("../middleware/check-auth");
 const User = require('../models/user');
 const LogUser = require("../models/log-users");
 
+const useragent = require('useragent');
+
 const router = express.Router();
 
 const saltRounds = 15;
@@ -14,11 +16,12 @@ const saltRounds = 15;
 const secret = "udmen3kdfov8n4d6h0kogkm3c469j0torjg3flno6957dfgfh044";
 
 router.post("/signup", (req, res, next) => {
-  if (req.body.email && req.body.password){
+  if (req.body.username && req.body.password){
 
     bcrypt.hash(req.body.password, saltRounds)
       .then( hash => {
         const user = new User({
+          username: req.body.username,
           email: req.body.email,
           password: hash,
         });
@@ -28,10 +31,15 @@ router.post("/signup", (req, res, next) => {
           // create log data
           const userLog = new LogUser({
             userId: result._id,
+            username: result.username,
             email: result.email,
+            clientTimestamp: req.body.clientDate, // same as clientDate
+            serverTimestamp: Date.now(),
             clientDate: req.body.clientDate,
             serverDate: Date.now(),
             type: "created account",
+            userAgent: useragent.parse(req.headers['user-agent']).toString(),
+            userAgentRaw: req.headers['user-agent']
           });
 
           // save log data
@@ -50,6 +58,7 @@ router.post("/signup", (req, res, next) => {
             })
           })
           .catch( (err: any) => {
+            console.error(err);
             res.status(500).json({
               error: err
               })
@@ -58,22 +67,24 @@ router.post("/signup", (req, res, next) => {
   } else {
     res.status(500).json({
       message: "Error reding auth data sent."
-    })
+    });
   }
 
 });
 
 router.post("/login", (req, res, next) => {
 
-    if (!req.body.email || !req.body.password){
+    if (!req.body.username || !req.body.password){
+      console.error("No username or password provided");
       return res.status(401).json({
         message: "Auth Failed"
       });
     }
 
     let fetchedUser: any;
-    User.findOne({ email: req.body.email }).then((user: any) => {
+    User.findOne({ username: req.body.username }).then((user: any) => {
       if (!user) {
+        console.error("No user found with this username");
         return res.status(401).json({message: "Auth failed"});
       }
 
@@ -91,23 +102,29 @@ router.post("/login", (req, res, next) => {
 
       // compare failed
       if (!result) {
+        console.error("Comparing password failed");
         return res.status(401).json({
           message: "Auth Failed"
         });
       }
 
       // web token for authentication, only when the auth didn't fail
-      const token = jwt.sign({email: fetchedUser.email, userId: fetchedUser._id}, /*global.*/secret, { expiresIn: "1h" });
-      console.log("Login successful - " + fetchedUser.email + " - token: " + token);
+      const token = jwt.sign({ username: fetchedUser.username, userId: fetchedUser._id }, /*global.*/secret, { expiresIn: "1h" });
+      console.log("Login successful - " + fetchedUser.username + " - token: " + token);
       console.log("-----------\n" + fetchedUser + "\n-------------------");
 
       // create log data
       const userLog = new LogUser({
         userId: fetchedUser._id,
+        username: fetchedUser.username,
         email: fetchedUser.email,
+        clientTimestamp: req.body.clientDate, // same as clientDate
+        serverTimestamp: Date.now(),
         clientDate: req.body.clientDate,
         serverDate: Date.now(),
         type: "login",
+        userAgent: useragent.parse(req.headers['user-agent']).toString(),
+        userAgentRaw: req.headers['user-agent']
       });
 
       // save log data
@@ -123,7 +140,9 @@ router.post("/login", (req, res, next) => {
       res.status(200).json({
         token: token,
         expiresIn: 3600, // seconds
-        userId: fetchedUser._id
+        userId: fetchedUser._id,
+        username: fetchedUser.username,
+        email: fetchedUser.email
       })
     })
     .catch((err: any) => {
@@ -143,6 +162,7 @@ router.post("/logout", (req, res) => {
       clientDate: req.body.clientDate,
       serverDate: Date.now(),
       type: "logout",
+      userAgent: useragent.parse(req.headers['user-agent']).toString()
     });
 
     // save log data
@@ -173,9 +193,5 @@ router.post("/logout", (req, res) => {
 router.post("/checkauth", checkAuth, (req, res, next) => {
   res.status(200).json({ message: "OK" });
 })
-
-router.get("/login", (req, res, next) => {
-  res.status(200).json({message: "All is well"});
-});
 
 module.exports = router;

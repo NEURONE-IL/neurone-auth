@@ -21,16 +21,27 @@ app.use((req, res, next) => {
   next();
 });
 
-// Connect to MongoDB
-mongoose.connect(url, {}, (err) => {
+
+function connectToDB(){
+  // Connect to MongoDB
+  mongoose.connect(url, {}, (err) => {
+      
+    if (err) {
+        console.log(err);
+    } else {
+      console.log(`MongoDB Connected: ${url}`);
+    }
     
-  if (err) {
-      console.log(err);
-  } else {
-    console.log(`MongoDB Connected: ${url}`);
-  }
-  
+  });
+}
+
+mongoose.connection.on('error', err => {
+  console.error(err);
+  console.log("Retrying connection with database...");
+  connectToDB();
 });
+
+connectToDB();
 
 app.get('/', (req, res) => {
     res.send(`This is the neurone-auth backend on port ${port}!`);

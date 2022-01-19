@@ -14,7 +14,7 @@ module.exports = (req:any, res:any, next:any) => {
 
     const token = req.body.jwt;
     const decodedToken = jwt.verify(token, /*global.*/secret);
-    req.userData = { email: decodedToken.email, userId: decodedToken.userId }
+    req.userData = { username: decodedToken.username, userId: decodedToken.userId }
     next();
   } catch (error) {
     res.status(401).json({message: "Auth failed [check-auth]"});
