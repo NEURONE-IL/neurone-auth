@@ -1,13 +1,10 @@
+import 'dotenv/config';
 import express from "express";
-import mongodb = require('mongodb');
 import mongoose from 'mongoose';
 
 // Connect URL + db
 const url = 'mongodb://127.0.0.1:27017/test';
 
-// TODO: figure out if this is appropiate
-// TODO: fix this for use with nodemon
-//global.secret = "udmen3kdfov8n4d6h0kogkm3c469j0torjg3flno6957dfgfh044";
 
 const app = express();
 app.use(express.json());

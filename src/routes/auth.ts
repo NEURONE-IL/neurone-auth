@@ -1,7 +1,8 @@
-import express, { application } from "express";
+import 'dotenv/config';
+import express from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { Error, Schema } from "mongoose";
+import { Error } from "mongoose";
 
 const checkAuth = require("../middleware/check-auth");
 const User = require('../models/user');
@@ -11,9 +12,7 @@ const useragent = require('useragent');
 
 const router = express.Router();
 
-const saltRounds = 15;
-// TODO: refactor to use global 
-const secret = "udmen3kdfov8n4d6h0kogkm3c469j0torjg3flno6957dfgfh044";
+const saltRounds = process.env.SALT_ROUNDS || 2;
 
 router.post("/signup", (req, res, next) => {
   if (req.body.username && req.body.password){
@@ -109,7 +108,7 @@ router.post("/login", (req, res, next) => {
       }
 
       // web token for authentication, only when the auth didn't fail
-      const token = jwt.sign({ username: fetchedUser.username, userId: fetchedUser._id }, /*global.*/secret, { expiresIn: "1h" });
+      const token = jwt.sign({ username: fetchedUser.username, userId: fetchedUser._id }, process.env.SECRET_KEY || '', { expiresIn: "1h" });
       console.log("Login successful - " + fetchedUser.username + " - token: " + token);
       console.log("-----------\n" + fetchedUser + "\n-------------------");
 
@@ -189,7 +188,6 @@ router.post("/logout", (req, res) => {
   })
 });
 
-// TODO: check how to help other components know the current user (probably the login info will be enough)
 router.post("/checkauth", checkAuth, (req, res, next) => {
   res.status(200).json({ message: "OK" });
 })

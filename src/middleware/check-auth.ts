@@ -4,8 +4,7 @@ const jwt = require("jsonwebtoken");
 
 module.exports = (req:any, res:any, next:any) => {
 
-  // TODO: refactor to use global 
-  const secret = "udmen3kdfov8n4d6h0kogkm3c469j0torjg3flno6957dfgfh044";
+  const secret = process.env.SECRET_KEY || '';
     
   // pattern of the token in the header file: "Bearer <token here>"
   try{
