@@ -12,9 +12,25 @@ const useragent = require('useragent');
 
 const router = express.Router();
 
-const saltRounds = process.env.SALT_ROUNDS || 2;
-
 router.post("/signup", (req, res, next) => {
+
+  // default salt rounds
+  let saltRounds = 2;
+  try {
+    // check if there is a salt round variable in the env and try to parse it as int
+    if (process.env.SALT_ROUNDS){
+      const envSalt = parseInt(process.env.SALT_ROUNDS);
+      if (envSalt !== NaN){
+        saltRounds = envSalt;
+      }
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({message: "Error while creating user."});
+    return;
+  }
+
+  console.log("SALT:", saltRounds);
   if (req.body.username && req.body.password){
 
     bcrypt.hash(req.body.password, saltRounds)
