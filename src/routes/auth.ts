@@ -30,7 +30,6 @@ router.post("/signup", (req, res, next) => {
     return;
   }
 
-  console.log("SALT:", saltRounds);
   if (req.body.username && req.body.password){
 
     bcrypt.hash(req.body.password, saltRounds)
