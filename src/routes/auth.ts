@@ -122,6 +122,10 @@ router.post("/login", (req, res, next) => {
         });
       }
 
+      if (!process.env.SECRET_KEY){
+        console.warn("WARNING: No secret found. Please use the environment variable 'SECRET_KEY' to set it. Currently using an empty string.");
+      }
+
       // web token for authentication, only when the auth didn't fail
       const token = jwt.sign({ username: fetchedUser.username, userId: fetchedUser._id }, process.env.SECRET_KEY || '', { expiresIn: "1h" });
       console.log("Login successful - " + fetchedUser.username + " - token: " + token);
