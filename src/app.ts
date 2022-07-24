@@ -3,7 +3,7 @@ import express from "express";
 import mongoose from 'mongoose';
 
 // Connect URL + db
-const url = 'mongodb://127.0.0.1:27017/test';
+const url = process.env.DB || 'mongodb://127.0.0.1:27017/test';
 
 
 const app = express();
