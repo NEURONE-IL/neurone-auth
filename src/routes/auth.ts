@@ -20,7 +20,7 @@ router.post("/signup", (req, res, next) => {
     // check if there is a salt round variable in the env and try to parse it as int
     if (process.env.SALT_ROUNDS){
       const envSalt = parseInt(process.env.SALT_ROUNDS);
-      if (envSalt !== NaN){
+      if (!isNaN(envSalt)){
         saltRounds = envSalt;
       }
     }
@@ -126,8 +126,17 @@ router.post("/login", (req, res, next) => {
         console.warn("WARNING: No secret found. Please use the environment variable 'SECRET_KEY' to set it. Currently using an empty string.");
       }
 
+      // get duration of the token in seconds from env or use the default 3600 seconds (1 hour)
+      const DEFAULT_EXP_SECS = "3600";
+      let expiration = parseInt(process.env.TOKEN_DURATION ? process.env.TOKEN_DURATION : DEFAULT_EXP_SECS);
+      if (isNaN(expiration)) {
+        console.log("Could not read number of seconds in env variable 'TOKEN_DURATION'. Using default 3600 seconds.");
+        expiration = parseInt(DEFAULT_EXP_SECS);
+      }
+
+
       // web token for authentication, only when the auth didn't fail
-      const token = jwt.sign({ username: fetchedUser.username, userId: fetchedUser._id }, process.env.SECRET_KEY || '', { expiresIn: "1h" });
+      const token = jwt.sign({ username: fetchedUser.username, userId: fetchedUser._id }, process.env.SECRET_KEY || '', { expiresIn: expiration + " seconds"});
       console.log("Login successful - " + fetchedUser.username + " - token: " + token);
       console.log("-----------\n" + fetchedUser + "\n-------------------");
 
@@ -157,7 +166,7 @@ router.post("/login", (req, res, next) => {
 
       res.status(200).json({
         token: token,
-        expiresIn: 3600, // seconds
+        expiresIn: expiration, // seconds
         userId: fetchedUser._id,
         username: fetchedUser.username,
         email: fetchedUser.email
