@@ -2,17 +2,16 @@ import 'dotenv/config';
 import express from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { Error } from "mongoose";
 
 const checkAuth = require("../middleware/check-auth");
-const User = require('../models/user');
-const LogUser = require("../models/log-users");
+import User from '../models/user';
+import LogUser from "../models/log-users";
 
-const useragent = require('useragent');
+import useragent from 'useragent';
 
 const router = express.Router();
 
-router.post("/signup", (req, res, next) => {
+router.post("/signup", async (req, res, next) => {
 
   // default salt rounds
   let saltRounds = 2;
@@ -32,61 +31,63 @@ router.post("/signup", (req, res, next) => {
 
   if (req.body.username && req.body.password){
 
-    bcrypt.hash(req.body.password, saltRounds)
-      .then( hash => {
-        const user = new User({
-          username: req.body.username,
-          email: req.body.email,
-          password: hash,
-        });
-        user.save()
-        .then((result: any) => {
+    try {
+      const hash = await bcrypt.hash(req.body.password, saltRounds);
 
-          // create log data
-          const userLog = new LogUser({
-            userId: result._id,
-            username: result.username,
-            email: result.email,
-            clientTimestamp: req.body.clientDate, // same as clientDate
-            serverTimestamp: Date.now(),
-            clientDate: req.body.clientDate,
-            serverDate: Date.now(),
-            type: "created account",
-            userAgent: useragent.parse(req.headers['user-agent']).toString(),
-            userAgentRaw: req.headers['user-agent']
-          });
+      const user = new User({
+        username: req.body.username,
+        email: req.body.email,
+        password: hash,
+      });
 
-          // save log data
-          userLog.save().then( (result: any) => {
-            console.log("Log data of created user:");
-            console.log(result);
-          }).catch((err: Error) => {
-            console.log("Error saving log data of the user:");
-            console.log(userLog);
-            console.error(err);
-          });
+      const result = await user.save();
 
-          res.status(201).json({
-            message: "Profile created",
-            result: result
-            })
-          })
-          .catch( (err: any) => {
-            console.error(err);
-            res.status(500).json({
-              error: err
-              })
-            })
+      // create log data
+      const userLog = new LogUser({
+        userId: result._id,
+        username: result.username,
+        email: result.email,
+        clientTimestamp: req.body.clientDate, // same as clientDate
+        serverTimestamp: Date.now(),
+        clientDate: req.body.clientDate,
+        serverDate: Date.now(),
+        type: "created account",
+        userAgent: useragent.parse(req.headers['user-agent']).toString(),
+        userAgentRaw: req.headers['user-agent']
+      });
+
+      // save log data
+      const resultLog = userLog.save();
+      console.log("Log data of created user:");
+      console.log(resultLog);
+
+      res.status(201).json({
+        message: "Profile created",
+        result: result
       })
-  } else {
-    res.status(500).json({
-      message: "Error reding auth data sent."
-    });
+
+      
+    } catch(err:any) {
+      if (err.errors.username && err.errors.username.kind === 'unique'){
+        console.log("Username is not unique:", err.errors.username.value);
+        res.status(500).json({
+          message: "Username already taken.",
+          error: err
+        });
+        return;
+      }
+
+      console.error(err);
+      res.status(500).json({
+        message: "Error in server",
+        error: err
+      })
+    }
   }
 
 });
 
-router.post("/login", (req, res, next) => {
+router.post("/login", async (req, res, next) => {
 
     if (!req.body.username || !req.body.password){
       console.error("No username or password provided");
@@ -96,7 +97,8 @@ router.post("/login", (req, res, next) => {
     }
 
     let fetchedUser: any;
-    User.findOne({ username: req.body.username }).then((user: any) => {
+    try {
+      const user = await User.findOne({ username: req.body.username });
       if (!user) {
         console.error("No user found with this username");
         return res.status(401).json({message: "Auth failed"});
@@ -104,15 +106,13 @@ router.post("/login", (req, res, next) => {
 
       fetchedUser = user;
       console.log(user);
-      // compared sent password with password in data base
-      return bcrypt.compare(req.body.password, user.password)
-    })
-    .then((result: any) => {
-
       // no user found
       if (!fetchedUser) {
         return;
       }
+
+      // compared sent password with password in data base
+      const result = await bcrypt.compare(req.body.password, user.password);
 
       // compare failed
       if (!result) {
@@ -122,8 +122,12 @@ router.post("/login", (req, res, next) => {
         });
       }
 
+      let secret_key: string;
       if (!process.env.SECRET_KEY){
-        console.warn("WARNING: No secret found. Please use the environment variable 'SECRET_KEY' to set it. Currently using an empty string.");
+        secret_key = '1234';
+        console.warn("WARNING: No secret found. Please use the environment variable 'SECRET_KEY' to set it. Currently using '"+ secret_key +"'.");
+      } else {
+        secret_key = process.env.SECRET_KEY;
       }
 
       // get duration of the token in seconds from env or use the default 3600 seconds (1 hour)
@@ -136,7 +140,7 @@ router.post("/login", (req, res, next) => {
 
 
       // web token for authentication, only when the auth didn't fail
-      const token = jwt.sign({ username: fetchedUser.username, userId: fetchedUser._id }, process.env.SECRET_KEY || '', { expiresIn: expiration + " seconds"});
+      const token = jwt.sign({ username: fetchedUser.username, userId: fetchedUser._id }, secret_key, { expiresIn: expiration + " seconds"});
       console.log("Login successful - " + fetchedUser.username + " - token: " + token);
       console.log("-----------\n" + fetchedUser + "\n-------------------");
 
@@ -153,16 +157,11 @@ router.post("/login", (req, res, next) => {
         userAgent: useragent.parse(req.headers['user-agent']).toString(),
         userAgentRaw: req.headers['user-agent']
       });
-
+      
       // save log data
-      userLog.save().then( (result: any) => {
-        console.log("Log data of logged in user:");
-        console.log(result);
-      }).catch((err: Error) => {
-        console.log("Error saving log data of the user:");
-        console.log(userLog);
-        console.error(err);
-      });
+      const resultLog = await userLog.save();
+      console.log("Log data of logged in user:");
+      console.log(resultLog);
 
       res.status(200).json({
         token: token,
@@ -170,22 +169,24 @@ router.post("/login", (req, res, next) => {
         userId: fetchedUser._id,
         username: fetchedUser.username,
         email: fetchedUser.email
-      })
-    })
-    .catch((err: any) => {
+      });
+
+    } catch (err) {
       console.error("Server error in login:\n" + err);
-    })
+    }
+
 });
 
-router.post("/logout", (req, res) => {
+router.post("/logout", async (req, res) => {
 
-  // find user in db to save their email
-  User.findById(req.body.userId).then((result: any) => {
+  try {
+    // find user in db to save their email
+    const result = await User.findById(req.body.userId);
 
     // create log data
     const userLog = new LogUser({
       userId: req.body.userId,
-      email: result.email,
+      email: result?.email ? result.email : "",
       clientDate: req.body.clientDate,
       serverDate: Date.now(),
       type: "logout",
@@ -193,27 +194,17 @@ router.post("/logout", (req, res) => {
     });
 
     // save log data
-    userLog.save().then( (result: any) => {
+    const resultLog = await userLog.save();
+    console.log("Log data of logged out user:");
+    console.log(resultLog);
+    res.status(200).json({ message: "Log data saved." });
 
-      console.log("Log data of logged out user:");
-      console.log(result);
-      res.status(200).json({ message: "Log data saved." });
+  } catch (err) {
+    console.log("Error saving log data of the user:");
+    console.error(err);
+    res.status(500).json({ message: "Error saving log data." });
+  }
 
-    }).catch((err: Error) => {
-
-      console.log("Error saving log data of the user:");
-      console.log(userLog);
-      console.error(err);
-      res.status(500).json({ message: "Error saving log data." });
-
-    });
-
-  }).catch((error: any) => {
-    if(!res.headersSent) {
-      console.log(error);
-      res.status(500).json({ message: "Error saving log data." });
-    }
-  })
 });
 
 router.post("/checkauth", checkAuth, (req, res, next) => {
