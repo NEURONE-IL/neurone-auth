@@ -5,7 +5,7 @@ import mongoose from 'mongoose';
 // swagger
 import swaggerUi from 'swagger-ui-express';
 import swaggerJsDoc from 'swagger-jsdoc';
-import swaggerOptions from './openapi/openapi';
+import swaggerOptions from './docs/openapiconf';
 
 
 // Connect URL + db

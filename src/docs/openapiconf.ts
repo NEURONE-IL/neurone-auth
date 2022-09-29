@@ -1,5 +1,3 @@
-import 'dotenv/config';
-
 export default {
     "definition":{
         "openapi": "3.0.3",
@@ -19,4 +17,5 @@ export default {
         ],
     },
     "apis": ["./src/routes/*.ts"]
+    
 }
