@@ -3,7 +3,7 @@ import express from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
-const checkAuth = require("../middleware/check-auth");
+import checkAuth from "../middleware/check-auth";
 import User from '../models/user';
 import LogUser from "../models/log-users";
 

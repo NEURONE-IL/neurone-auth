@@ -2,7 +2,7 @@ const jwt = require("jsonwebtoken");
 
 
 
-module.exports = (req:any, res:any, next:any) => {
+export default (req:any, res:any, next:any) => {
 
   const secret = process.env.SECRET_KEY || '';
     
