@@ -43,10 +43,11 @@ const router = express.Router();
  *      properties:
  *        token:
  *          type: string
- *          description: Token to be used in header as 
+ *          description: Token to be used in header
  *        expiresIn:
  *          type: number
  *          description: The ammounts of seconds that the token will be valid
+ *          example: 3800
  *        userId:
  *          type: string
  *          description: The ID of the user in the Mongo database
@@ -63,12 +64,15 @@ const router = express.Router();
  *        username:
  *          type: string
  *          description: The username to identify the account
+ *          example: neurone
  *        password:
  *          type: string
  *          description: The password to access the accound
+ *          example: 1234
  *        email:
  *          type: string
  *          description: The email for associated to the account (optional)
+ *          example: neurone@neurone.com
  *        
  *    UserAccessData:    
  *      type: object
@@ -76,9 +80,11 @@ const router = express.Router();
  *        username:
  *          type: string
  *          description: The username to identify the account
+ *          example: neurone
  *        password:
  *          type: string
  *          description: The password to access the accound
+ *          example: 1234
  */
 
 /**
@@ -354,7 +360,8 @@ router.post("/login", async (req, res, next) => {
  * @swagger
  * /auth/logout:
  *  post:
- *    summary: Logout of account, used for log purposess since technically the jwt will be valid until the time expires
+ *    summary: Logout of account
+ *    description: Used for log purposess since technically the jwt will be valid until the time expires
  *    tags: [Auth]
  *    requestBody:
  *      required: true

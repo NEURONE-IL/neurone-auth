@@ -1,8 +1,8 @@
 # About
 
-Neurone-Auth is a node project that is part of the NEURONE Framewok. It serves as part of the back-end that provides a REST API for user login, signup, account status check, using JWT. For more inforation see https://github.com/NEURONE-IL/neurone-core
+Neurone-Auth is a node project that is part of the NEURONE Framewok. It serves as part of the back-end that provides a REST API for the end user's login, signup, account status check, using JWT. For more inforation see https://github.com/NEURONE-IL/neurone-core
 
-To read the local API docs, check `http://localhost:3005/api-docs/`, note that the port can be changed using env variables.
+To read the local API docs, check `http://localhost:3005/api-docs/` while the back-end is running, note that the port can be changed using env variables.
 
 # Running the back-end
 
