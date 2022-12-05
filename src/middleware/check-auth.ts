@@ -1,18 +1,16 @@
-const jwt = require("jsonwebtoken");
+import jwt from "jsonwebtoken";
 
 
 
-module.exports = (req:any, res:any, next:any) => {
+export default (req:any, res:any, next:any) => {
 
-  const secret = process.env.SECRET_KEY || '';
+  const secret = process.env.SECRET_KEY || '1234';
     
   // pattern of the token in the header file: "Bearer <token here>"
   try{
-    // TODO: evaluate if we should always use the header for this
-    //const token = req.headers.authorization.split(" ")[1];
+    const token = req.headers.authorization.split(" ")[1];
 
-    const token = req.body.jwt;
-    const decodedToken = jwt.verify(token, secret);
+    const decodedToken: any = jwt.verify(token, secret);
     req.userData = { username: decodedToken.username, userId: decodedToken.userId }
     next();
   } catch (error) {

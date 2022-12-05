@@ -2,6 +2,12 @@ import 'dotenv/config';
 import express from "express";
 import mongoose from 'mongoose';
 
+// swagger
+import swaggerUi from 'swagger-ui-express';
+import swaggerJsDoc from 'swagger-jsdoc';
+import swaggerOptions from './docs/openapiconf';
+
+
 // Connect URL + db
 const url = process.env.DB || 'mongodb://127.0.0.1:27017/test';
 
@@ -9,7 +15,11 @@ const url = process.env.DB || 'mongodb://127.0.0.1:27017/test';
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({extended: true})); // Parse URL-encoded bodies
-const port = 3005;
+const port = process.env.PORT || 3005;
+
+// swagger docs
+const docSpecs = swaggerJsDoc(swaggerOptions);
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(docSpecs));
 
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
